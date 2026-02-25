@@ -980,6 +980,9 @@
         document.getElementById('uploadPreview').classList.remove('show');
         document.getElementById('uploadControls').classList.remove('show');
 
+        // Restore camera video if it was previously started
+        if (cameraVideo) cameraVideo.style.display = '';
+
         if (!cameraVideo) {
           if (!modelReady) {
             showScreen('loadingScreen');
@@ -996,6 +999,9 @@
         document.getElementById('liveBadge').classList.remove('show');
         document.getElementById('scanLine').classList.remove('active');
         document.getElementById('corners').classList.remove('active');
+
+        // Hide camera video so it doesn't cover the upload preview
+        if (cameraVideo) cameraVideo.style.display = 'none';
 
         ['loadingScreen','cameraScreen','cameraBlockedScreen'].forEach(s =>
           document.getElementById(s).classList.add('hide'));
