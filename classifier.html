@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fish Classifier | Project HUSAY</title>
+  <!-- Preload CDN scripts so they start downloading immediately -->
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.6/dist/tf.min.js" as="script" crossorigin>
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js" as="script" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #060d1a;
+      --surface:  #0d1b2e;
+      --surface2: #112240;
+      --accent:   #0b4bff;
+      --accent2:  #00b3ff;
+      --text:     #e8f0fe;
+      --muted:    rgba(232,240,254,0.50);
+      --line:     rgba(232,240,254,0.08);
+      --green:    #22c55e;
+      --amber:    #f59e0b;
+      --red:      #ef4444;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%; font-family: Inter, system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+      -webkit-font-smoothing: antialiased; overflow: hidden;
+    }
+
+    body { display: flex; flex-direction: column; }
+
+    /* ── FILE:// WARNING BANNER ───────────────────────────── */
+    .fileBanner {
+      display: none;
+      align-items: center; gap: 10px;
+      padding: 10px 20px;
+      background: rgba(245,158,11,0.12);
+      border-bottom: 1px solid rgba(245,158,11,0.25);
+      font-size: 13px; font-weight: 600;
+      color: #fbbf24; flex-shrink: 0; flex-wrap: wrap;
+    }
+
+    .fileBanner.show { display: flex; }
+    .fileBanner svg  { flex-shrink: 0; }
+
+    .fileBanner code {
+      background: rgba(0,0,0,0.35); padding: 2px 7px;
+      border-radius: 5px; font-size: 12px; color: #fde68a;
+    }
+
+    /* ── HEADER ──────────────────────────────────────────── */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px; border-bottom: 1px solid var(--line);
+      background: rgba(13,27,46,0.97); backdrop-filter: blur(14px);
+      flex-shrink: 0; gap: 12px;
+    }
+
+    .headerBrand {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 17px; font-weight: 900; letter-spacing: -0.3px;
+    }
+
+    .headerBrand img {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: white; padding: 2px; object-fit: contain;
+    }
+
+    .headerBrand .sep { color: var(--muted); font-weight: 400; }
+    .headerBrand .app { color: var(--accent2); }
+
+    .headerRight { display: flex; align-items: center; gap: 10px; }
+
+    .liveBadge {
+      display: none; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 999px;
+      background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.30);
+      font-size: 12px; font-weight: 800; color: #ff7070;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    .liveBadge.show { display: flex; }
+
+    .liveDot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #ff4040; animation: blink 1.4s ease-in-out infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+    .btnBack {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: 10px;
+      background: rgba(232,240,254,0.07); border: 1px solid var(--line);
+      color: var(--text); font-size: 13px; font-weight: 700;
+      cursor: pointer; text-decoration: none; transition: background 200ms;
+    }
+
+    .btnBack:hover { background: rgba(232,240,254,0.13); }
+
+    /* ── MODE TABS ────────────────────────────────────────── */
+    .modeBar {
+      display: flex; flex-shrink: 0;
+      border-bottom: 1px solid var(--line);
+      background: rgba(13,27,46,0.90);
+      padding: 0 24px;
+    }
+
+    .modeBtn {
+      display: flex; align-items: center; gap: 7px;
+      padding: 12px 20px; font-size: 13.5px; font-weight: 700;
+      color: var(--muted); background: none; border: none;
+      border-bottom: 2px solid transparent; cursor: pointer;
+      font-family: inherit; transition: color 200ms, border-color 200ms;
+      margin-bottom: -1px;
+    }
+
+    .modeBtn:hover  { color: var(--text); }
+    .modeBtn.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+    /* ── MAIN ─────────────────────────────────────────────── */
+    .main {
+      flex: 1; display: grid;
+      grid-template-columns: 1fr 420px; min-height: 0;
+    }
+
+    /* ── LEFT PANEL ───────────────────────────────────────── */
+    .leftPanel {
+      position: relative; display: flex;
+      align-items: center; justify-content: center;
+      background: #000; border-right: 1px solid var(--line); overflow: hidden;
+    }
+
+    /* TM webcam canvas */
+    .leftPanel canvas {
+      width: 100% !important; height: 100% !important; object-fit: cover;
+    }
+
+    /* Scan line */
+    .scanLine {
+      position: absolute; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, transparent 0%, var(--accent2) 50%, transparent 100%);
+      pointer-events: none; display: none;
+    }
+
+    .scanLine.active { display: block; animation: scanMove 2.8s ease-in-out infinite; }
+
+    @keyframes scanMove {
+      0%   { top: 5%;  opacity: 0; }
+      10%  { opacity: 0.8; }
+      90%  { opacity: 0.8; }
+      100% { top: 95%; opacity: 0; }
+    }
+
+    /* Corners */
+    .corners { position: absolute; inset: 0; pointer-events: none; display: none; }
+    .corners.active { display: block; }
+
+    .corner {
+      position: absolute; width: 36px; height: 36px;
+      border-color: var(--accent2); border-style: solid; opacity: 0.7;
+    }
+
+    .corner.tl { top: 20px; left: 20px;   border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+    .corner.tr { top: 20px; right: 20px;  border-width: 3px 3px 0 0; border-radius: 0 6px 0 0; }
+    .corner.bl { bottom: 20px; left: 20px;  border-width: 0 0 3px 3px; border-radius: 0 0 0 6px; }
+    .corner.br { bottom: 20px; right: 20px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+
+    /* ── GENERIC SCREEN (start / error / warning) ─────────── */
+    .screen {
+      position: absolute; inset: 0; z-index: 10;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px; text-align: center; padding: 40px;
+      background: #000;
+    }
+
+    .screen.hide { display: none; }
+
+    .fishFloat {
+      font-size: 80px;
+      animation: floatAnim 3s ease-in-out infinite;
+      filter: drop-shadow(0 0 24px rgba(0,179,255,0.35));
+    }
+
+    @keyframes floatAnim {
+      0%,100% { transform: translateY(0) rotate(-3deg); }
+      50%      { transform: translateY(-14px) rotate(3deg); }
+    }
+
+    .screenTitle { font-size: 22px; font-weight: 800; line-height: 1.3; }
+    .screenSub   { font-size: 14px; color: var(--muted); max-width: 320px; line-height: 1.7; }
+
+    /* Model loading progress bar */
+    .modelProgress {
+      width: 240px; height: 5px;
+      background: rgba(232,240,254,0.10);
+      border-radius: 999px; overflow: hidden;
+    }
+
+    .modelProgressFill {
+      height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0%; transition: width 400ms ease;
+      animation: progressShimmer 1.5s ease-in-out infinite;
+    }
+
+    @keyframes progressShimmer {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.6; }
+    }
+
+    .btnPrimary {
+      display: flex; align-items: center; gap: 9px;
+      padding: 14px 30px; border-radius: 14px;
+      background: linear-gradient(130deg, var(--accent) 0%, var(--accent2) 100%);
+      color: white; font-size: 15px; font-weight: 800;
+      border: none; cursor: pointer;
+      box-shadow: 0 10px 28px rgba(11,75,255,0.40);
+      transition: transform 200ms, box-shadow 200ms;
+      font-family: inherit;
+    }
+
+    .btnPrimary:hover  { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(11,75,255,0.50); }
+    .btnPrimary:active { transform: translateY(0); }
+    .btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Local server hint box */
+    .hintBox {
+      background: rgba(245,158,11,0.10);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 12px; padding: 14px 18px;
+      font-size: 13px; color: #fbbf24; line-height: 1.8;
+      text-align: left; max-width: 340px;
+    }
+
+    .hintBox code {
+      display: inline-block; background: rgba(0,0,0,0.4);
+      padding: 2px 8px; border-radius: 5px;
+      font-size: 12px; color: #fde68a;
+    }
+
+    /* ── UPLOAD AREA ─────────────────────────────────────── */
+    .uploadArea {
+      position: absolute; inset: 0; z-index: 10;
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 0; background: var(--bg); padding: 24px;
+    }
+
+    .uploadArea.show { display: flex; }
+
+    .dropZone {
+      width: 100%; max-width: 460px;
+      border: 2px dashed rgba(0,179,255,0.28);
+      border-radius: 20px; padding: 36px 24px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 12px; text-align: center;
+      cursor: pointer;
+      background: rgba(0,179,255,0.03);
+      transition: border-color 200ms, background 200ms;
+    }
+
+    .dropZone:hover, .dropZone.drag {
+      border-color: var(--accent2);
+      background: rgba(0,179,255,0.07);
+    }
+
+    .dropIcon  { font-size: 48px; line-height: 1; }
+    .dropTitle { font-size: 17px; font-weight: 800; }
+    .dropSub   { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    .btnUpload {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 22px; border-radius: 12px;
+      background: linear-gradient(130deg, var(--accent) 0%, var(--accent2) 100%);
+      color: white; font-size: 14px; font-weight: 800;
+      border: none; cursor: pointer; font-family: inherit;
+      box-shadow: 0 6px 18px rgba(11,75,255,0.35);
+      transition: transform 200ms, box-shadow 200ms;
+    }
+
+    .btnUpload:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(11,75,255,0.45); }
+
+    #fileInput { display: none; }
+
+    /* Uploaded image preview */
+    .uploadPreview {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      display: none;
+    }
+
+    .uploadPreview.show { display: block; }
+
+    .uploadControls {
+      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+      display: none; gap: 10px; z-index: 20;
+    }
+
+    .uploadControls.show { display: flex; }
+
+    .btnSecondary {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 18px; border-radius: 10px;
+      background: rgba(232,240,254,0.10); border: 1px solid var(--line);
+      color: var(--text); font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: background 200ms;
+    }
+
+    .btnSecondary:hover { background: rgba(232,240,254,0.18); }
+
+    /* ── RESULTS PANEL ───────────────────────────────────── */
+    .resultsPanel {
+      display: flex; flex-direction: column;
+      background: var(--surface); overflow-y: auto; overflow-x: hidden;
+    }
+
+    .resultsInner {
+      display: flex; flex-direction: column;
+      gap: 16px; padding: 22px; flex: 1;
+    }
+
+    .panelLabel {
+      font-size: 10.5px; font-weight: 800;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--accent2);
+    }
+
+    /* Winner card */
+    .winnerCard {
+      background: var(--surface2); border: 1px solid var(--line);
+      border-radius: 20px; padding: 26px 22px;
+      text-align: center; position: relative; overflow: hidden;
+      transition: border-color 500ms;
+    }
+
+    .winnerCard.has-result { border-color: rgba(11,75,255,0.3); }
+
+    .winnerCard::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 200px 120px at 50% -20%, rgba(0,179,255,0.07), transparent 70%);
+      pointer-events: none;
+    }
+
+    .winnerEmoji {
+      font-size: 68px; line-height: 1; margin-bottom: 10px; display: block;
+      transition: transform 400ms cubic-bezier(.2,.9,.2,1);
+    }
+
+    .winnerCard.has-result .winnerEmoji { transform: scale(1.08); }
+
+    .winnerTag {
+      display: inline-block; font-size: 10px; font-weight: 800;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 8px;
+    }
+
+    .winnerName {
+      font-size: 44px; font-weight: 900; letter-spacing: -1.5px; line-height: 1;
+      background: linear-gradient(120deg, #fff 30%, var(--accent2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 10px; min-height: 50px;
+    }
+
+    .winnerName.waiting {
+      background: linear-gradient(120deg, var(--muted) 0%, rgba(232,240,254,0.25) 100%);
+      -webkit-background-clip: text; background-clip: text;
+      font-size: 26px; margin-top: 6px;
+    }
+
+    .winnerConf { font-size: 24px; font-weight: 800; color: var(--accent2); min-height: 30px; }
+
+    /* Bars */
+    .barsTitle { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+    .bars { display: flex; flex-direction: column; gap: 10px; }
+
+    .barItem {
+      background: var(--surface2); border: 1px solid var(--line);
+      border-radius: 14px; padding: 13px 16px;
+      transition: border-color 400ms, background 400ms;
+    }
+
+    .barItem.top { border-color: rgba(0,179,255,0.28); background: rgba(0,179,255,0.06); }
+
+    .barRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+    .barName { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; }
+    .barEmoji { font-size: 18px; }
+
+    .barPct {
+      font-size: 17px; font-weight: 900; color: var(--accent2);
+      min-width: 42px; text-align: right; transition: all 300ms;
+    }
+
+    .barTrack { height: 8px; background: rgba(232,240,254,0.07); border-radius: 999px; overflow: hidden; }
+    .barFill  { height: 100%; border-radius: 999px; width: 0%; transition: width 500ms cubic-bezier(.2,.9,.2,1); }
+
+    /* Status */
+    .statusBar {
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 14px; background: var(--surface2);
+      border: 1px solid var(--line); border-radius: 12px;
+      font-size: 12.5px; font-weight: 600; color: var(--muted);
+    }
+
+    .statusDot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--muted); flex-shrink: 0; transition: background 300ms;
+    }
+
+    .statusDot.ready   { background: var(--green); }
+    .statusDot.loading { background: var(--amber); animation: blink 1s ease-in-out infinite; }
+    .statusDot.error   { background: var(--red); }
+
+    /* ── TOAST NOTIFICATION ──────────────────────────────── */
+    .toast {
+      position: fixed;
+      top: 80px; right: 20px; z-index: 999;
+      display: flex; align-items: center; gap: 10px;
+      padding: 13px 18px;
+      background: rgba(13, 27, 46, 0.96);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      border-radius: 14px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.45), 0 0 0 1px rgba(34,197,94,0.10);
+      font-size: 14px; font-weight: 700;
+      color: var(--text);
+      backdrop-filter: blur(16px);
+      opacity: 0;
+      transform: translateX(24px);
+      transition: opacity 260ms ease, transform 260ms cubic-bezier(.2,.9,.2,1);
+      pointer-events: none;
+      max-width: 320px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .toastIcon {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: rgba(34,197,94,0.18);
+      border: 1px solid rgba(34,197,94,0.35);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+
+    .toastBody { min-width: 0; }
+
+    .toastTitle {
+      font-size: 13px; font-weight: 800;
+      color: var(--green); margin-bottom: 1px;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    .toastMsg { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .toastConf { font-size: 11.5px; color: var(--muted); font-weight: 600; margin-top: 1px; }
+
+    /* Progress bar inside toast */
+    .toastBar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 3px; border-radius: 0 0 14px 14px; overflow: hidden;
+    }
+
+    .toastBarFill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), #86efac);
+      width: 100%;
+      transform-origin: left;
+      animation: toastDrain 3s linear forwards;
+    }
+
+    @keyframes toastDrain { to { transform: scaleX(0); } }
+
+    /* ── WINNER CARD FLASH ───────────────────────────────── */
+    @keyframes cardFlash {
+      0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.55); }
+      40%  { box-shadow: 0 0 0 8px rgba(34,197,94,0.20); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+
+    .winnerCard.flash { animation: cardFlash 600ms ease-out forwards; }
+
+    /* ── UPLOAD SUCCESS BADGE ────────────────────────────── */
+    .uploadBadge {
+      position: absolute;
+      top: 16px; left: 16px; z-index: 15;
+      display: none;
+      align-items: center; gap: 7px;
+      padding: 8px 14px; border-radius: 999px;
+      background: rgba(22, 163, 74, 0.90);
+      border: 1px solid rgba(34,197,94,0.50);
+      font-size: 13px; font-weight: 800;
+      color: white;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 14px rgba(22,163,74,0.35);
+      animation: badgePop 350ms cubic-bezier(.2,.9,.2,1) forwards;
+    }
+
+    .uploadBadge.show { display: flex; }
+
+    @keyframes badgePop {
+      0%   { transform: scale(0.7); opacity: 0; }
+      100% { transform: scale(1);   opacity: 1; }
+    }
+
+    /* ── CAMERA CLASSIFIED FLASH ─────────────────────────── */
+    .cameraFlash {
+      position: absolute; inset: 0; z-index: 5;
+      pointer-events: none;
+      border: 3px solid transparent;
+      border-radius: 0;
+      transition: border-color 150ms ease;
+    }
+
+    .cameraFlash.ping {
+      border-color: rgba(34,197,94,0.60);
+      animation: flashFade 600ms ease-out forwards;
+    }
+
+    @keyframes flashFade {
+      0%   { border-color: rgba(34,197,94,0.70); }
+      100% { border-color: rgba(34,197,94,0); }
+    }
+
+    /* ── RESPONSIVE ──────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .main { grid-template-columns: 1fr; grid-template-rows: 55vh 1fr; overflow-y: auto; }
+      html, body { overflow: auto; }
+      .leftPanel { border-right: none; border-bottom: 1px solid var(--line); }
+      .winnerName { font-size: 34px; }
+    }
+
+    @media (max-width: 500px) {
+      .header { padding: 10px 14px; }
+      .headerBrand { font-size: 14px; }
+      .resultsInner { padding: 14px; }
+      .modeBar { padding: 0 14px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast">
+    <div class="toastIcon" id="toastIcon">✓</div>
+    <div class="toastBody">
+      <div class="toastTitle" id="toastTitle">Classified</div>
+      <div class="toastMsg"   id="toastMsg">—</div>
+      <div class="toastConf"  id="toastConf">—</div>
+    </div>
+    <div class="toastBar"><div class="toastBarFill" id="toastBarFill"></div></div>
+  </div>
+
+  <!-- FILE:// WARNING BANNER -->
+  <div class="fileBanner" id="fileBanner">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <span>
+      Camera is blocked on <code>file://</code>. For local testing run:
+      <code>npx serve .</code> then open <code>http://localhost:3000</code>
+      &nbsp;·&nbsp; Camera will work fine once you upload to your website.
+    </span>
+  </div>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="headerBrand">
+      <img src="isufst-logo.png" alt="ISUFST" />
+      Project HUSAY
+      <span class="sep">/</span>
+      <span class="app">Fish Classifier</span>
+    </div>
+    <div class="headerRight">
+      <div class="liveBadge" id="liveBadge">
+        <div class="liveDot"></div> LIVE
+      </div>
+      <a class="btnBack" href="index.html">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </a>
+    </div>
+  </header>
+
+  <!-- MODE TABS -->
+  <div class="modeBar">
+    <button class="modeBtn active" id="tabCamera" onclick="switchMode('camera')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      Live Camera
+    </button>
+    <button class="modeBtn" id="tabUpload" onclick="switchMode('upload')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+      Upload Image
+    </button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- Left panel -->
+    <div class="leftPanel" id="leftPanel">
+
+      <!-- Loading screen (shown while model preloads) -->
+      <div class="screen" id="loadingScreen">
+        <div class="fishFloat">🐟</div>
+        <div class="screenTitle">Loading AI Model…</div>
+        <div class="modelProgress"><div class="modelProgressFill" id="progressFill"></div></div>
+        <div class="screenSub" id="loadingMsg">Downloading TensorFlow.js engine…</div>
+      </div>
+
+      <!-- Camera ready screen -->
+      <div class="screen hide" id="cameraScreen">
+        <div class="fishFloat">🎥</div>
+        <div class="screenTitle">Ready to Classify</div>
+        <p class="screenSub">Model loaded. Click below to start the live camera feed.</p>
+        <button class="btnPrimary" id="startBtn" onclick="startCamera()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          Start Camera
+        </button>
+      </div>
+
+      <!-- Camera blocked (file://) screen -->
+      <div class="screen hide" id="cameraBlockedScreen">
+        <div style="font-size:64px">🚫</div>
+        <div class="screenTitle">Camera Blocked</div>
+        <div class="hintBox">
+          <strong>Browsers block camera access on <code>file://</code></strong><br><br>
+          To test locally, open a terminal in this folder and run:<br>
+          <code>npx serve .</code><br><br>
+          Then open <code>http://localhost:3000</code> in your browser.<br><br>
+          ✅ Camera will work automatically once your site is live on the web.
+        </div>
+      </div>
+
+      <!-- Upload area -->
+      <div class="uploadArea" id="uploadArea">
+        <div class="dropZone" id="dropZone"
+          onclick="document.getElementById('fileInput').click()"
+          ondragover="onDragOver(event)"
+          ondragleave="onDragLeave(event)"
+          ondrop="onDrop(event)">
+          <div class="dropIcon">📂</div>
+          <div class="dropTitle">Drop a fish photo here</div>
+          <p class="dropSub">or click to browse your files<br><small style="opacity:.6">JPG · PNG · WEBP</small></p>
+          <button class="btnUpload" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+            Choose Image
+          </button>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" onchange="onFileSelected(event)" />
+      </div>
+
+      <!-- Uploaded image preview -->
+      <img class="uploadPreview" id="uploadPreview" alt="Uploaded fish" />
+
+      <div class="uploadControls" id="uploadControls">
+        <button class="btnSecondary" onclick="clearUpload()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Try Another
+        </button>
+      </div>
+
+      <!-- Upload success badge -->
+      <div class="uploadBadge" id="uploadBadge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        Image Analyzed
+      </div>
+
+      <!-- Camera classified flash border -->
+      <div class="cameraFlash" id="cameraFlash"></div>
+
+      <!-- Overlays -->
+      <div class="scanLine" id="scanLine"></div>
+      <div class="corners" id="corners">
+        <div class="corner tl"></div><div class="corner tr"></div>
+        <div class="corner bl"></div><div class="corner br"></div>
+      </div>
+    </div><!-- .leftPanel -->
+
+    <!-- Results panel -->
+    <div class="resultsPanel">
+      <div class="resultsInner">
+        <div class="panelLabel">Classification Result</div>
+
+        <div class="winnerCard" id="winnerCard">
+          <span class="winnerEmoji" id="winnerEmoji">🐟</span>
+          <div class="winnerTag">Identified Species</div>
+          <div class="winnerName waiting" id="winnerName">—</div>
+          <div class="winnerConf" id="winnerConf"></div>
+        </div>
+
+        <div class="barsTitle">Confidence per class</div>
+        <div class="bars" id="bars"></div>
+
+        <div class="statusBar">
+          <div class="statusDot loading" id="statusDot"></div>
+          <span id="statusText">Loading AI model in background…</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .main -->
+
+  <!-- Pinned CDN versions — faster than @latest (no redirect) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.6/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
+
+  <script>
+    /* ── Config ──────────────────────────────────────────────── */
+    const MODEL_URL    = './model.json';
+    const METADATA_URL = './metadata.json';
+    const ON_FILE      = location.protocol === 'file:';
+
+    const EMOJI_MAP  = { bangus: '🐟', tilapia: '🐠', carp: '🐡' };
+    const BAR_COLORS = ['#4fc3f7', '#4db6ac', '#ffb74d', '#f48fb1'];
+
+    let model       = null;
+    let modelReady  = false;
+    let webcam      = null;
+    let loopActive  = false;
+    let currentMode = 'camera';
+
+    /* ── Helpers ─────────────────────────────────────────────── */
+    function setStatus(state, text) {
+      document.getElementById('statusDot').className  = `statusDot ${state}`;
+      document.getElementById('statusText').textContent = text;
+    }
+
+    function getEmoji(label) {
+      return EMOJI_MAP[label.toLowerCase()] ?? '🐟';
+    }
+
+    function showScreen(id) {
+      ['loadingScreen','cameraScreen','cameraBlockedScreen'].forEach(s => {
+        document.getElementById(s).classList.toggle('hide', s !== id);
+      });
+    }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    let toastTimer = null;
+
+    function showToast(emoji, species, confidence, mode) {
+      const toast    = document.getElementById('toast');
+      const icon     = document.getElementById('toastIcon');
+      const title    = document.getElementById('toastTitle');
+      const msg      = document.getElementById('toastMsg');
+      const conf     = document.getElementById('toastConf');
+      const barFill  = document.getElementById('toastBarFill');
+
+      icon.textContent  = emoji;
+      title.textContent = mode === 'upload' ? '✅ Image Analyzed' : '✅ Classified';
+      msg.textContent   = species;
+      conf.textContent  = `${confidence}% confidence`;
+
+      // Restart drain animation
+      barFill.style.animation = 'none';
+      barFill.offsetHeight;   // reflow
+      barFill.style.animation = 'toastDrain 3s linear forwards';
+
+      toast.classList.add('show');
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+    }
+
+    /* ── Winner card flash ───────────────────────────────────── */
+    function flashCard() {
+      const card = document.getElementById('winnerCard');
+      card.classList.remove('flash');
+      card.offsetHeight; // reflow
+      card.classList.add('flash');
+      setTimeout(() => card.classList.remove('flash'), 700);
+    }
+
+    /* ── Camera border ping ──────────────────────────────────── */
+    function pingCamera() {
+      const el = document.getElementById('cameraFlash');
+      el.classList.remove('ping');
+      el.offsetHeight;
+      el.classList.add('ping');
+      setTimeout(() => el.classList.remove('ping'), 700);
+    }
+
+    /* ── Build bars ──────────────────────────────────────────── */
+    function buildBars(labels) {
+      const barsEl = document.getElementById('bars');
+      barsEl.innerHTML = '';
+      labels.forEach((label, i) => {
+        const color = BAR_COLORS[i % BAR_COLORS.length];
+        barsEl.insertAdjacentHTML('beforeend', `
+          <div class="barItem" id="bar-${i}">
+            <div class="barRow">
+              <div class="barName"><span class="barEmoji">${getEmoji(label)}</span>${label}</div>
+              <div class="barPct" id="pct-${i}">—</div>
+            </div>
+            <div class="barTrack">
+              <div class="barFill" id="fill-${i}"
+                style="background:linear-gradient(90deg,${color}88,${color});"></div>
+            </div>
+          </div>`);
+      });
+    }
+
+    /* ── Model preload (starts immediately on page load) ─────── */
+    async function preloadModel() {
+      try {
+        document.getElementById('loadingMsg').textContent = 'Downloading TensorFlow.js engine…';
+        document.getElementById('progressFill').style.width = '20%';
+
+        // Wait for TM library to be available
+        let waited = 0;
+        while (typeof tmImage === 'undefined' && waited < 15000) {
+          await new Promise(r => setTimeout(r, 100));
+          waited += 100;
+        }
+
+        if (typeof tmImage === 'undefined') throw new Error('TM library failed to load');
+
+        document.getElementById('loadingMsg').textContent = 'Loading fish classification model…';
+        document.getElementById('progressFill').style.width = '50%';
+
+        model = await tmImage.load(MODEL_URL, METADATA_URL);
+        buildBars(model.getClassLabels());
+
+        document.getElementById('progressFill').style.width = '100%';
+        modelReady = true;
+
+        // Show appropriate screen
+        if (currentMode === 'camera') {
+          if (ON_FILE) {
+            showScreen('cameraBlockedScreen');
+          } else {
+            showScreen('cameraScreen');
+          }
+        } else {
+          showScreen('cameraScreen'); // hide loading, show nothing (upload area handles it)
+          document.getElementById('cameraScreen').classList.add('hide');
+          document.getElementById('uploadArea').classList.add('show');
+        }
+
+        setStatus('ready', 'Model loaded — ready to classify');
+
+      } catch (err) {
+        setStatus('error', 'Model failed: ' + err.message);
+        document.getElementById('loadingMsg').textContent = '⚠️ ' + err.message;
+        console.error(err);
+      }
+    }
+
+    /* ── Mode switch ─────────────────────────────────────────── */
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById('tabCamera').classList.toggle('active', mode === 'camera');
+      document.getElementById('tabUpload').classList.toggle('active', mode === 'upload');
+
+      if (mode === 'camera') {
+        // Hide upload stuff
+        document.getElementById('uploadArea').classList.remove('show');
+        document.getElementById('uploadPreview').classList.remove('show');
+        document.getElementById('uploadControls').classList.remove('show');
+
+        // Stop upload mode camera loop interference
+        if (!webcam) {
+          if (!modelReady) {
+            showScreen('loadingScreen');
+          } else if (ON_FILE) {
+            showScreen('cameraBlockedScreen');
+          } else {
+            showScreen('cameraScreen');
+          }
+        }
+
+      } else {
+        // Upload mode
+        loopActive = false;
+        document.getElementById('liveBadge').classList.remove('show');
+        document.getElementById('scanLine').classList.remove('active');
+        document.getElementById('corners').classList.remove('active');
+
+        // Hide all camera screens
+        ['loadingScreen','cameraScreen','cameraBlockedScreen'].forEach(s =>
+          document.getElementById(s).classList.add('hide'));
+
+        // Show upload area or preview
+        const preview = document.getElementById('uploadPreview');
+        if (preview.getAttribute('data-loaded')) {
+          preview.classList.add('show');
+          document.getElementById('uploadControls').classList.add('show');
+        } else {
+          if (!modelReady) {
+            // Show loading screen in upload context
+            document.getElementById('loadingScreen').classList.remove('hide');
+          } else {
+            document.getElementById('uploadArea').classList.add('show');
+          }
+        }
+
+        setStatus('ready', 'Upload a fish image to classify');
+      }
+    }
+
+    /* ── Camera ──────────────────────────────────────────────── */
+    async function startCamera() {
+      if (!modelReady) { setStatus('error', 'Model not ready yet'); return; }
+
+      const btn = document.getElementById('startBtn');
+      btn.disabled = true;
+      btn.textContent = 'Starting camera…';
+      setStatus('loading', 'Requesting camera…');
+
+      try {
+        webcam = new tmImage.Webcam(640, 480, true);
+        await webcam.setup();
+        await webcam.play();
+
+        document.getElementById('leftPanel').appendChild(webcam.canvas);
+        showScreen('cameraScreen'); // hides it (we want canvas visible)
+        document.getElementById('cameraScreen').classList.add('hide');
+
+        document.getElementById('liveBadge').classList.add('show');
+        document.getElementById('scanLine').classList.add('active');
+        document.getElementById('corners').classList.add('active');
+
+        setStatus('ready', 'Classifying live…');
+        loopActive = true;
+        requestAnimationFrame(cameraLoop);
+
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Start Camera`;
+
+        const msg = err.name === 'NotAllowedError'
+          ? 'Camera permission denied — allow camera access in browser settings'
+          : err.name === 'NotFoundError'
+          ? 'No camera found on this device'
+          : 'Camera error: ' + err.message;
+
+        setStatus('error', msg);
+      }
+    }
+
+    async function cameraLoop() {
+      if (!loopActive || currentMode !== 'camera') return;
+      webcam.update();
+      const pred = await model.predict(webcam.canvas);
+      updateUI(pred);
+      requestAnimationFrame(cameraLoop);
+    }
+
+    /* ── Upload ──────────────────────────────────────────────── */
+    function onDragOver(e)  { e.preventDefault(); document.getElementById('dropZone').classList.add('drag'); }
+    function onDragLeave()  { document.getElementById('dropZone').classList.remove('drag'); }
+    function onDrop(e)      { e.preventDefault(); onDragLeave(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith('image/')) classifyFile(f); }
+    function onFileSelected(e) { const f = e.target.files[0]; if (f) classifyFile(f); }
+
+    async function classifyFile(file) {
+      if (!modelReady) { setStatus('error', 'Model is still loading, please wait…'); return; }
+      setStatus('loading', 'Classifying image…');
+
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onload = async () => {
+        const preview = document.getElementById('uploadPreview');
+        preview.src = url;
+        preview.setAttribute('data-loaded', '1');
+        preview.classList.add('show');
+        document.getElementById('uploadArea').classList.remove('show');
+        document.getElementById('uploadControls').classList.add('show');
+
+        // Center-crop to 224×224 (matches TM preprocessing)
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 224;
+        const ctx = canvas.getContext('2d');
+        const size = Math.min(img.width, img.height);
+        const sx   = (img.width  - size) / 2;
+        const sy   = (img.height - size) / 2;
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 224, 224);
+
+        const pred   = await model.predict(canvas);
+        const winner = pred.reduce((a, b) => a.probability > b.probability ? a : b);
+        const pct    = Math.round(winner.probability * 100);
+
+        // Show upload badge + toast
+        const badge = document.getElementById('uploadBadge');
+        badge.classList.add('show');
+
+        showToast(getEmoji(winner.className), winner.className, pct, 'upload');
+        updateUI(pred, 'upload');
+        URL.revokeObjectURL(url);
+      };
+
+      img.src = url;
+    }
+
+    function clearUpload() {
+      const preview = document.getElementById('uploadPreview');
+      preview.classList.remove('show');
+      preview.src = '';
+      preview.removeAttribute('data-loaded');
+      document.getElementById('uploadControls').classList.remove('show');
+      document.getElementById('uploadArea').classList.add('show');
+      document.getElementById('fileInput').value = '';
+      document.getElementById('uploadBadge').classList.remove('show');
+      lastWinner = null;
+      resetResults();
+      setStatus('ready', 'Upload a fish image to classify');
+    }
+
+    /* ── Update results ──────────────────────────────────────── */
+    let lastWinner = null;   // track class changes for camera toast
+
+    function updateUI(prediction, mode = 'camera') {
+      let winnerIdx = 0, winnerProb = 0;
+      prediction.forEach((p, i) => {
+        if (p.probability > winnerProb) { winnerProb = p.probability; winnerIdx = i; }
+      });
+
+      const winner = prediction[winnerIdx];
+      const pct    = Math.round(winner.probability * 100);
+      const emoji  = getEmoji(winner.className);
+
+      // Flash card on every update
+      flashCard();
+
+      // Camera: ping border + toast only when species changes
+      if (mode === 'camera') {
+        pingCamera();
+        if (winner.className !== lastWinner) {
+          lastWinner = winner.className;
+          showToast(emoji, winner.className, pct, 'camera');
+        }
+      }
+
+      document.getElementById('winnerCard').classList.add('has-result');
+      document.getElementById('winnerEmoji').textContent = emoji;
+      const nameEl = document.getElementById('winnerName');
+      nameEl.classList.remove('waiting');
+      nameEl.textContent = winner.className;
+      document.getElementById('winnerConf').textContent = `${pct}% confidence`;
+
+      prediction.forEach((p, i) => {
+        const v = Math.round(p.probability * 100);
+        const pctEl  = document.getElementById(`pct-${i}`);
+        const fillEl = document.getElementById(`fill-${i}`);
+        const barEl  = document.getElementById(`bar-${i}`);
+        if (!pctEl) return;
+        pctEl.textContent  = `${v}%`;
+        fillEl.style.width = `${v}%`;
+        barEl.classList.toggle('top', i === winnerIdx);
+      });
+
+      setStatus('ready', `Updated ${new Date().toLocaleTimeString()}`);
+    }
+
+    function resetResults() {
+      document.getElementById('winnerCard').classList.remove('has-result');
+      const nameEl = document.getElementById('winnerName');
+      nameEl.classList.add('waiting');
+      nameEl.textContent = '—';
+      document.getElementById('winnerConf').textContent = '';
+      document.getElementById('winnerEmoji').textContent = '🐟';
+      document.querySelectorAll('.barFill').forEach(el => el.style.width = '0%');
+      document.querySelectorAll('.barPct').forEach(el => el.textContent = '—');
+      document.querySelectorAll('.barItem').forEach(el => el.classList.remove('top'));
+    }
+
+    /* ── Boot ────────────────────────────────────────────────── */
+    if (ON_FILE) {
+      document.getElementById('fileBanner').classList.add('show');
+    }
+
+    // Start preloading model as soon as scripts are ready
+    preloadModel();
+  </script>
+
+</body>
+</html>
