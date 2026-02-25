@@ -839,7 +839,6 @@
 
     let model       = null;
     let modelReady  = false;
-    let webcam      = null;   // unused — kept for compatibility
     let loopActive  = false;
     let currentMode = 'camera';
 
@@ -1024,6 +1023,7 @@
     predCanvas.width = predCanvas.height = 224;
 
     async function startCamera() {
+      if (cameraVideo) return;                // already running — ignore double-click
       if (!modelReady) { setStatus('error', 'Model not ready yet'); return; }
 
       const btn = document.getElementById('startBtn');
@@ -1048,7 +1048,10 @@
         cameraVideo.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;';
 
         document.getElementById('leftPanel').appendChild(cameraVideo);
-        await new Promise(resolve => cameraVideo.addEventListener('loadeddata', resolve, { once: true }));
+        await new Promise((resolve, reject) => {
+          const t = setTimeout(() => reject(new Error('Camera timed out — no video received')), 8000);
+          cameraVideo.addEventListener('loadeddata', () => { clearTimeout(t); resolve(); }, { once: true });
+        });
 
         showScreen('cameraScreen');
         document.getElementById('cameraScreen').classList.add('hide');
@@ -1096,6 +1099,11 @@
 
       const url = URL.createObjectURL(file);
       const img = new Image();
+
+      img.onerror = () => {
+        setStatus('error', 'Could not load image — please try a different file');
+        URL.revokeObjectURL(url);
+      };
 
       img.onload = async () => {
         const preview = document.getElementById('uploadPreview');
@@ -1209,6 +1217,13 @@
     if (ON_FILE) {
       document.getElementById('fileBanner').classList.add('show');
     }
+
+    // Release camera when user navigates away
+    window.addEventListener('pagehide', () => {
+      if (cameraVideo?.srcObject) {
+        cameraVideo.srcObject.getTracks().forEach(t => t.stop());
+      }
+    });
 
     preloadModel();
   </script>

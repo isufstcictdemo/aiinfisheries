@@ -628,6 +628,72 @@
 
     .resourcesList .btn { justify-content: flex-start; width: 100%; }
 
+    /* ── DATASET CREDITS ─────────────────────────────────────── */
+    .creatorList {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .creatorRow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      transition: box-shadow var(--ease), transform var(--ease);
+    }
+
+    .creatorRow:hover {
+      box-shadow: 0 6px 20px rgba(12,40,80,0.08);
+      transform: translateY(-1px);
+    }
+
+    .creatorAvatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: 900;
+      flex-shrink: 0;
+      letter-spacing: 0.5px;
+    }
+
+    .creatorName {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .kaggleBadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: rgba(32,129,226,0.10);
+      border: 1px solid rgba(32,129,226,0.20);
+      color: #1e6fc8;
+      font-size: 12px;
+      font-weight: 800;
+      text-decoration: none;
+      transition: background var(--ease), box-shadow var(--ease);
+      white-space: nowrap;
+    }
+
+    .kaggleBadge:hover {
+      background: rgba(32,129,226,0.17);
+      box-shadow: 0 4px 14px rgba(32,129,226,0.18);
+    }
+
     /* ── FOOTER ──────────────────────────────────────────────── */
     footer {
       border-top: 1px solid var(--line);
@@ -696,6 +762,7 @@
       <div class="navlinks">
         <a href="#preview">Preview</a>
         <a href="#guide">Guide</a>
+        <a href="#dataset">Credits</a>
         <a href="#contact">Contact</a>
       </div>
 
@@ -709,6 +776,7 @@
     <div class="mobileNav" id="mobileNav" role="navigation" aria-label="Mobile navigation">
       <a href="#preview">Preview</a>
       <a href="#guide">Guide</a>
+      <a href="#dataset">Credits</a>
       <a href="#contact">Contact</a>
     </div>
   </nav>
@@ -832,6 +900,55 @@
       </div>
     </section>
 
+    <!-- DATASET CREDITS -->
+    <section id="dataset" class="fadeUp delay3">
+      <div class="sectionHead">
+        <div>
+          <div class="sectionLabel">Attribution</div>
+          <h2>Dataset Credits</h2>
+          <p>The fish images used to train the AI classifier come from a publicly available dataset on Kaggle. We sincerely thank the authors for making their work open to the community.</p>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card" style="background: linear-gradient(135deg, rgba(11,75,255,0.04), rgba(0,179,255,0.02)); border-color: rgba(11,75,255,0.10);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap;">
+            <h3 style="margin: 0;">Fish Species Dataset</h3>
+            <a class="kaggleBadge" href="https://www.kaggle.com/datasets/markdaniellampa/fish-dataset" target="_blank" rel="noopener">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              View on Kaggle ↗
+            </a>
+          </div>
+          <p style="font-size: 13.5px; margin-bottom: 16px;">Fish images collected from the Marinig Fishing Port, Cabuyao City — includes Bangus, Tilapia, and Carp classes used to train this workshop's model.</p>
+          <div class="creatorList">
+            <div class="creatorRow">
+              <div class="creatorAvatar">ML</div>
+              <div class="creatorName">Mark Daniel Lampa</div>
+            </div>
+            <div class="creatorRow">
+              <div class="creatorAvatar">RL</div>
+              <div class="creatorName">Rose Claire Librojo</div>
+            </div>
+            <div class="creatorRow">
+              <div class="creatorAvatar">MC</div>
+              <div class="creatorName">Mary Mae Calamba</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="background: linear-gradient(135deg, rgba(11,75,255,0.04), rgba(0,179,255,0.02)); border-color: rgba(11,75,255,0.10);">
+          <div class="cardIcon iBlue" aria-hidden="true">🐟</div>
+          <h3>Classes Used</h3>
+          <p style="margin-bottom: 16px; font-size: 13.5px;">The model was trained to classify three freshwater fish species common in Philippine aquaculture.</p>
+          <ul>
+            <li><strong>Bangus</strong> — milkfish, the national fish of the Philippines</li>
+            <li><strong>Tilapia</strong> — widely farmed freshwater fish</li>
+            <li><strong>Carp</strong> — common freshwater species used in aquaculture</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <!-- CONTACT -->
     <section id="contact" class="fadeUp delay3">
       <div class="sectionHead">
@@ -913,6 +1030,7 @@
         <div class="footerLinks">
           <a class="btn" href="#preview">Preview</a>
           <a class="btn" href="#guide">Guide</a>
+          <a class="btn" href="#dataset">Credits</a>
           <a class="btn" href="#contact">Contact</a>
         </div>
       </div>
