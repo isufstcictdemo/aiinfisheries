@@ -180,9 +180,12 @@
     .screen.hide { display: none; }
 
     .fishFloat {
-      font-size: 80px;
       animation: floatAnim 3s ease-in-out infinite;
       filter: drop-shadow(0 0 24px rgba(0,179,255,0.35));
+    }
+
+    .fishFloat img {
+      width: 80px; height: 80px; object-fit: contain; display: block;
     }
 
     @keyframes floatAnim {
@@ -393,7 +396,7 @@
     }
 
     .winnerEmoji {
-      font-size: 48px; line-height: 1;
+      width: 56px; height: 56px; object-fit: contain; display: block;
       transition: transform 400ms cubic-bezier(.2,.9,.2,1);
     }
 
@@ -477,7 +480,7 @@
 
     .barRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .barName { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; }
-    .barEmoji { font-size: 18px; }
+    .barEmoji { width: 22px; height: 22px; object-fit: contain; display: inline-block; }
 
     .barPct {
       font-size: 17px; font-weight: 900; color: var(--accent2);
@@ -710,7 +713,7 @@
 
       <!-- Loading screen -->
       <div class="screen" id="loadingScreen">
-        <div class="fishFloat">🐟</div>
+        <div class="fishFloat"><img src="fish.png" alt="Fish" /></div>
         <div class="screenTitle">Loading AI Model…</div>
         <div class="modelProgress"><div class="modelProgressFill" id="progressFill"></div></div>
         <div class="screenSub" id="loadingMsg">Downloading TensorFlow.js engine…</div>
@@ -792,7 +795,7 @@
 
         <div class="winnerCard" id="winnerCard">
           <div class="winnerEmojiWrap">
-            <span class="winnerEmoji" id="winnerEmoji">🐟</span>
+            <img class="winnerEmoji" id="winnerEmoji" src="fish.png" alt="Fish" />
           </div>
           <div class="winnerTag">Identified Species</div>
           <div class="winnerName waiting" id="winnerName">—</div>
@@ -826,7 +829,12 @@
     const METADATA_URL = './metadata.json';
     const ON_FILE      = location.protocol === 'file:';
 
-    const EMOJI_MAP  = { bangus: '🐟', tilapia: '🐠', carp: '🐡' };
+    const IMG_MAP = {
+      bangus:  'bangus-icon.png',
+      tilapia: 'tilapia-icon.png',
+      carp:    'carp-icon.png',
+    };
+    const DEFAULT_ICON = 'fish.png';
     const BAR_COLORS = ['#4fc3f7', '#4db6ac', '#ffb74d', '#f48fb1'];
 
     let model       = null;
@@ -841,8 +849,8 @@
       document.getElementById('statusText').textContent = text;
     }
 
-    function getEmoji(label) {
-      return EMOJI_MAP[label.toLowerCase()] ?? '🐟';
+    function getIconSrc(label) {
+      return IMG_MAP[label.toLowerCase()] ?? DEFAULT_ICON;
     }
 
     function showScreen(id) {
@@ -862,7 +870,7 @@
       const conf     = document.getElementById('toastConf');
       const barFill  = document.getElementById('toastBarFill');
 
-      icon.textContent  = emoji;
+      icon.innerHTML    = `<img src="${emoji}" alt="" style="width:20px;height:20px;object-fit:contain;">`;
       title.textContent = mode === 'upload' ? '✅ Image Analyzed' : '✅ Classified';
       msg.textContent   = species;
       conf.textContent  = `${confidence}% confidence`;
@@ -903,7 +911,7 @@
         barsEl.insertAdjacentHTML('beforeend', `
           <div class="barItem" id="bar-${i}">
             <div class="barRow">
-              <div class="barName"><span class="barEmoji">${getEmoji(label)}</span>${label}</div>
+              <div class="barName"><img class="barEmoji" src="${getIconSrc(label)}" alt="${label}" />${label}</div>
               <div class="barPct" id="pct-${i}">—</div>
             </div>
             <div class="barTrack">
@@ -1112,7 +1120,7 @@
         const badge = document.getElementById('uploadBadge');
         badge.classList.add('show');
 
-        showToast(getEmoji(winner.className), winner.className, pct, 'upload');
+        showToast(getIconSrc(winner.className), winner.className, pct, 'upload');
         updateUI(pred, 'upload');
         URL.revokeObjectURL(url);
       };
@@ -1143,9 +1151,9 @@
         if (p.probability > winnerProb) { winnerProb = p.probability; winnerIdx = i; }
       });
 
-      const winner = prediction[winnerIdx];
-      const pct    = Math.round(winner.probability * 100);
-      const emoji  = getEmoji(winner.className);
+      const winner   = prediction[winnerIdx];
+      const pct      = Math.round(winner.probability * 100);
+      const iconSrc  = getIconSrc(winner.className);
 
       flashCard();
 
@@ -1153,12 +1161,12 @@
         pingCamera();
         if (winner.className !== lastWinner) {
           lastWinner = winner.className;
-          showToast(emoji, winner.className, pct, 'camera');
+          showToast(iconSrc, winner.className, pct, 'camera');
         }
       }
 
       document.getElementById('winnerCard').classList.add('has-result');
-      document.getElementById('winnerEmoji').textContent = emoji;
+      document.getElementById('winnerEmoji').src = iconSrc;
 
       const nameEl = document.getElementById('winnerName');
       nameEl.classList.remove('waiting');
@@ -1191,7 +1199,7 @@
       document.getElementById('winnerConfNum').textContent   = '';
       document.getElementById('winnerConfPct').textContent   = '';
       document.getElementById('winnerConfLabel').textContent = '';
-      document.getElementById('winnerEmoji').textContent = '🐟';
+      document.getElementById('winnerEmoji').src = DEFAULT_ICON;
       document.querySelectorAll('.barFill').forEach(el => el.style.width = '0%');
       document.querySelectorAll('.barPct').forEach(el => el.textContent = '—');
       document.querySelectorAll('.barItem').forEach(el => el.classList.remove('top'));
