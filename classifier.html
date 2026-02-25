@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Fish Classifier | Project HUSAY</title>
-  <!-- Preload CDN scripts so they start downloading immediately -->
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.6/dist/tf.min.js" as="script" crossorigin>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js" as="script" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -125,7 +124,7 @@
     /* ── MAIN ─────────────────────────────────────────────── */
     .main {
       flex: 1; display: grid;
-      grid-template-columns: 1fr 420px; min-height: 0;
+      grid-template-columns: 1fr 440px; min-height: 0;
     }
 
     /* ── LEFT PANEL ───────────────────────────────────────── */
@@ -135,7 +134,6 @@
       background: #000; border-right: 1px solid var(--line); overflow: hidden;
     }
 
-    /* TM webcam canvas */
     .leftPanel canvas {
       width: 100% !important; height: 100% !important; object-fit: cover;
     }
@@ -195,7 +193,6 @@
     .screenTitle { font-size: 22px; font-weight: 800; line-height: 1.3; }
     .screenSub   { font-size: 14px; color: var(--muted); max-width: 320px; line-height: 1.7; }
 
-    /* Model loading progress bar */
     .modelProgress {
       width: 240px; height: 5px;
       background: rgba(232,240,254,0.10);
@@ -229,7 +226,6 @@
     .btnPrimary:active { transform: translateY(0); }
     .btnPrimary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    /* Local server hint box */
     .hintBox {
       background: rgba(245,158,11,0.10);
       border: 1px solid rgba(245,158,11,0.25);
@@ -249,34 +245,56 @@
       position: absolute; inset: 0; z-index: 10;
       display: none; flex-direction: column;
       align-items: center; justify-content: center;
-      gap: 0; background: var(--bg); padding: 24px;
+      gap: 0; background: var(--bg); padding: 32px;
     }
 
     .uploadArea.show { display: flex; }
 
     .dropZone {
-      width: 100%; max-width: 460px;
-      border: 2px dashed rgba(0,179,255,0.28);
-      border-radius: 20px; padding: 36px 24px;
+      width: 100%; max-width: 420px;
+      border: 2px dashed rgba(0,179,255,0.32);
+      border-radius: 24px; padding: 48px 28px;
       display: flex; flex-direction: column;
-      align-items: center; gap: 12px; text-align: center;
+      align-items: center; gap: 14px; text-align: center;
       cursor: pointer;
       background: rgba(0,179,255,0.03);
-      transition: border-color 200ms, background 200ms;
+      transition: border-color 200ms, background 200ms, box-shadow 200ms;
+      position: relative; overflow: hidden;
+    }
+
+    .dropZone::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 200px 100px at 50% 0%, rgba(0,179,255,0.06), transparent 70%);
+      pointer-events: none;
     }
 
     .dropZone:hover, .dropZone.drag {
       border-color: var(--accent2);
       background: rgba(0,179,255,0.07);
+      box-shadow: 0 0 40px rgba(0,179,255,0.08);
     }
 
-    .dropIcon  { font-size: 48px; line-height: 1; }
+    .dropIconWrap {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(0,179,255,0.10);
+      border: 1.5px solid rgba(0,179,255,0.20);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 34px; line-height: 1;
+      transition: background 200ms, box-shadow 200ms;
+    }
+
+    .dropZone:hover .dropIconWrap {
+      background: rgba(0,179,255,0.16);
+      box-shadow: 0 0 22px rgba(0,179,255,0.20);
+    }
+
     .dropTitle { font-size: 17px; font-weight: 800; }
     .dropSub   { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
     .btnUpload {
       display: flex; align-items: center; gap: 8px;
-      padding: 10px 22px; border-radius: 12px;
+      padding: 11px 24px; border-radius: 12px;
       background: linear-gradient(130deg, var(--accent) 0%, var(--accent2) 100%);
       color: white; font-size: 14px; font-weight: 800;
       border: none; cursor: pointer; font-family: inherit;
@@ -288,7 +306,6 @@
 
     #fileInput { display: none; }
 
-    /* Uploaded image preview */
     .uploadPreview {
       width: 100%; height: 100%;
       object-fit: contain;
@@ -322,88 +339,179 @@
 
     .resultsInner {
       display: flex; flex-direction: column;
-      gap: 16px; padding: 22px; flex: 1;
+      gap: 18px; padding: 24px; flex: 1;
     }
 
     .panelLabel {
       font-size: 10.5px; font-weight: 800;
       letter-spacing: 2px; text-transform: uppercase; color: var(--accent2);
+      display: flex; align-items: center; gap: 8px;
     }
 
-    /* Winner card */
+    .panelLabel::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, rgba(0,179,255,0.25), transparent);
+    }
+
+    /* ── WINNER CARD ─────────────────────────────────────── */
     .winnerCard {
       background: var(--surface2); border: 1px solid var(--line);
-      border-radius: 20px; padding: 26px 22px;
+      border-radius: 22px; padding: 28px 22px;
       text-align: center; position: relative; overflow: hidden;
-      transition: border-color 500ms;
+      transition: border-color 500ms, box-shadow 500ms;
     }
 
-    .winnerCard.has-result { border-color: rgba(11,75,255,0.3); }
+    .winnerCard.has-result {
+      border-color: rgba(0,179,255,0.35);
+      box-shadow: 0 0 50px rgba(0,179,255,0.10), inset 0 0 60px rgba(0,179,255,0.04);
+    }
 
     .winnerCard::before {
       content: ''; position: absolute; inset: 0;
-      background: radial-gradient(ellipse 200px 120px at 50% -20%, rgba(0,179,255,0.07), transparent 70%);
-      pointer-events: none;
+      background: radial-gradient(ellipse 220px 130px at 50% -10%, rgba(0,179,255,0.08), transparent 70%);
+      pointer-events: none; transition: opacity 500ms;
+    }
+
+    .winnerCard.has-result::before {
+      background: radial-gradient(ellipse 220px 130px at 50% -10%, rgba(0,179,255,0.14), transparent 70%);
+    }
+
+    /* Emoji circle */
+    .winnerEmojiWrap {
+      width: 96px; height: 96px; border-radius: 50%;
+      background: rgba(0,179,255,0.07);
+      border: 1.5px solid rgba(0,179,255,0.14);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      transition: background 400ms, border-color 400ms, box-shadow 400ms;
+    }
+
+    .winnerCard.has-result .winnerEmojiWrap {
+      background: rgba(0,179,255,0.12);
+      border-color: rgba(0,179,255,0.30);
+      box-shadow: 0 0 32px rgba(0,179,255,0.18), inset 0 0 20px rgba(0,179,255,0.08);
     }
 
     .winnerEmoji {
-      font-size: 68px; line-height: 1; margin-bottom: 10px; display: block;
+      font-size: 48px; line-height: 1;
       transition: transform 400ms cubic-bezier(.2,.9,.2,1);
     }
 
-    .winnerCard.has-result .winnerEmoji { transform: scale(1.08); }
+    .winnerCard.has-result .winnerEmoji { transform: scale(1.10); }
 
     .winnerTag {
       display: inline-block; font-size: 10px; font-weight: 800;
       letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--muted); margin-bottom: 8px;
+      color: var(--muted); margin-bottom: 6px;
     }
 
     .winnerName {
-      font-size: 44px; font-weight: 900; letter-spacing: -1.5px; line-height: 1;
+      font-size: 46px; font-weight: 900; letter-spacing: -1.5px; line-height: 1;
       background: linear-gradient(120deg, #fff 30%, var(--accent2) 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; margin-bottom: 10px; min-height: 50px;
+      background-clip: text; margin-bottom: 8px; min-height: 52px;
     }
 
     .winnerName.waiting {
       background: linear-gradient(120deg, var(--muted) 0%, rgba(232,240,254,0.25) 100%);
       -webkit-background-clip: text; background-clip: text;
-      font-size: 26px; margin-top: 6px;
+      font-size: 26px; margin-top: 10px;
     }
 
-    .winnerConf { font-size: 24px; font-weight: 800; color: var(--accent2); min-height: 30px; }
+    .winnerConfRow {
+      display: flex; align-items: baseline; justify-content: center; gap: 4px;
+    }
 
-    /* Bars */
-    .barsTitle { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+    .winnerConfNum {
+      font-size: 38px; font-weight: 900; line-height: 1;
+      color: var(--accent2); min-height: 42px;
+      transition: color 300ms;
+    }
+
+    .winnerConfPct {
+      font-size: 18px; font-weight: 800; color: var(--accent2);
+      opacity: 0.8;
+    }
+
+    .winnerConfLabel {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px;
+    }
+
+    /* ── BARS ─────────────────────────────────────────────── */
+    .barsSection { display: flex; flex-direction: column; gap: 10px; }
+
+    .barsSectionLabel {
+      font-size: 10.5px; font-weight: 800;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--accent2);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .barsSectionLabel::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, rgba(0,179,255,0.25), transparent);
+    }
+
     .bars { display: flex; flex-direction: column; gap: 10px; }
 
     .barItem {
       background: var(--surface2); border: 1px solid var(--line);
       border-radius: 14px; padding: 13px 16px;
-      transition: border-color 400ms, background 400ms;
+      transition: border-color 400ms, background 400ms, box-shadow 400ms;
+      position: relative; overflow: hidden;
     }
 
-    .barItem.top { border-color: rgba(0,179,255,0.28); background: rgba(0,179,255,0.06); }
+    .barItem::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+      width: 3px; border-radius: 14px 0 0 14px;
+      background: transparent; transition: background 400ms;
+    }
 
-    .barRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+    .barItem.top {
+      border-color: rgba(0,179,255,0.30);
+      background: rgba(0,179,255,0.06);
+      box-shadow: 0 2px 16px rgba(0,179,255,0.08);
+    }
+
+    .barItem.top::before { background: var(--accent2); }
+
+    .barRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .barName { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; }
     .barEmoji { font-size: 18px; }
 
     .barPct {
       font-size: 17px; font-weight: 900; color: var(--accent2);
-      min-width: 42px; text-align: right; transition: all 300ms;
+      min-width: 46px; text-align: right; transition: all 300ms;
     }
 
-    .barTrack { height: 8px; background: rgba(232,240,254,0.07); border-radius: 999px; overflow: hidden; }
-    .barFill  { height: 100%; border-radius: 999px; width: 0%; transition: width 500ms cubic-bezier(.2,.9,.2,1); }
+    .barTrack {
+      height: 10px; background: rgba(232,240,254,0.07);
+      border-radius: 999px; overflow: hidden;
+    }
+
+    .barFill {
+      height: 100%; border-radius: 999px; width: 0%;
+      transition: width 500ms cubic-bezier(.2,.9,.2,1);
+      position: relative; overflow: hidden;
+    }
+
+    .barFill::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+      animation: barShimmer 2.5s ease-in-out infinite;
+    }
+
+    @keyframes barShimmer {
+      0%,100% { transform: translateX(-100%); }
+      50%      { transform: translateX(100%); }
+    }
 
     /* Status */
     .statusBar {
       display: flex; align-items: center; gap: 9px;
-      padding: 11px 14px; background: var(--surface2);
+      padding: 10px 14px; background: var(--surface2);
       border: 1px solid var(--line); border-radius: 12px;
-      font-size: 12.5px; font-weight: 600; color: var(--muted);
+      font-size: 12px; font-weight: 600; color: var(--muted);
     }
 
     .statusDot {
@@ -435,32 +543,27 @@
       max-width: 320px;
     }
 
-    .toast.show {
-      opacity: 1;
-      transform: translateX(0);
-    }
+    .toast.show { opacity: 1; transform: translateX(0); }
 
     .toastIcon {
-      width: 30px; height: 30px; border-radius: 50%;
+      width: 32px; height: 32px; border-radius: 50%;
       background: rgba(34,197,94,0.18);
       border: 1px solid rgba(34,197,94,0.35);
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px; flex-shrink: 0;
+      font-size: 16px; flex-shrink: 0;
     }
 
     .toastBody { min-width: 0; }
 
     .toastTitle {
-      font-size: 13px; font-weight: 800;
-      color: var(--green); margin-bottom: 1px;
+      font-size: 11px; font-weight: 800;
+      color: var(--green); margin-bottom: 2px;
       text-transform: uppercase; letter-spacing: 0.5px;
     }
 
-    .toastMsg { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
+    .toastMsg  { font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .toastConf { font-size: 11.5px; color: var(--muted); font-weight: 600; margin-top: 1px; }
 
-    /* Progress bar inside toast */
     .toastBar {
       position: absolute; bottom: 0; left: 0; right: 0;
       height: 3px; border-radius: 0 0 14px 14px; overflow: hidden;
@@ -478,8 +581,8 @@
 
     /* ── WINNER CARD FLASH ───────────────────────────────── */
     @keyframes cardFlash {
-      0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.55); }
-      40%  { box-shadow: 0 0 0 8px rgba(34,197,94,0.20); }
+      0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.60); }
+      40%  { box-shadow: 0 0 0 10px rgba(34,197,94,0.18); }
       100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
     }
 
@@ -491,13 +594,13 @@
       top: 16px; left: 16px; z-index: 15;
       display: none;
       align-items: center; gap: 7px;
-      padding: 8px 14px; border-radius: 999px;
-      background: rgba(22, 163, 74, 0.90);
+      padding: 8px 16px; border-radius: 999px;
+      background: rgba(22, 163, 74, 0.92);
       border: 1px solid rgba(34,197,94,0.50);
       font-size: 13px; font-weight: 800;
       color: white;
       backdrop-filter: blur(8px);
-      box-shadow: 0 4px 14px rgba(22,163,74,0.35);
+      box-shadow: 0 4px 16px rgba(22,163,74,0.35);
       animation: badgePop 350ms cubic-bezier(.2,.9,.2,1) forwards;
     }
 
@@ -532,7 +635,8 @@
       .main { grid-template-columns: 1fr; grid-template-rows: 55vh 1fr; overflow-y: auto; }
       html, body { overflow: auto; }
       .leftPanel { border-right: none; border-bottom: 1px solid var(--line); }
-      .winnerName { font-size: 34px; }
+      .winnerName { font-size: 36px; }
+      .winnerConfNum { font-size: 30px; }
     }
 
     @media (max-width: 500px) {
@@ -604,7 +708,7 @@
     <!-- Left panel -->
     <div class="leftPanel" id="leftPanel">
 
-      <!-- Loading screen (shown while model preloads) -->
+      <!-- Loading screen -->
       <div class="screen" id="loadingScreen">
         <div class="fishFloat">🐟</div>
         <div class="screenTitle">Loading AI Model…</div>
@@ -643,7 +747,7 @@
           ondragover="onDragOver(event)"
           ondragleave="onDragLeave(event)"
           ondrop="onDrop(event)">
-          <div class="dropIcon">📂</div>
+          <div class="dropIconWrap">📂</div>
           <div class="dropTitle">Drop a fish photo here</div>
           <p class="dropSub">or click to browse your files<br><small style="opacity:.6">JPG · PNG · WEBP</small></p>
           <button class="btnUpload" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
@@ -687,14 +791,22 @@
         <div class="panelLabel">Classification Result</div>
 
         <div class="winnerCard" id="winnerCard">
-          <span class="winnerEmoji" id="winnerEmoji">🐟</span>
+          <div class="winnerEmojiWrap">
+            <span class="winnerEmoji" id="winnerEmoji">🐟</span>
+          </div>
           <div class="winnerTag">Identified Species</div>
           <div class="winnerName waiting" id="winnerName">—</div>
-          <div class="winnerConf" id="winnerConf"></div>
+          <div class="winnerConfRow">
+            <div class="winnerConfNum" id="winnerConfNum"></div>
+            <div class="winnerConfPct" id="winnerConfPct"></div>
+          </div>
+          <div class="winnerConfLabel" id="winnerConfLabel"></div>
         </div>
 
-        <div class="barsTitle">Confidence per class</div>
-        <div class="bars" id="bars"></div>
+        <div class="barsSection">
+          <div class="barsSectionLabel">Confidence per class</div>
+          <div class="bars" id="bars"></div>
+        </div>
 
         <div class="statusBar">
           <div class="statusDot loading" id="statusDot"></div>
@@ -705,7 +817,6 @@
 
   </div><!-- .main -->
 
-  <!-- Pinned CDN versions — faster than @latest (no redirect) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.6/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
 
@@ -720,7 +831,7 @@
 
     let model       = null;
     let modelReady  = false;
-    let webcam      = null;
+    let webcam      = null;   // unused — kept for compatibility
     let loopActive  = false;
     let currentMode = 'camera';
 
@@ -756,13 +867,11 @@
       msg.textContent   = species;
       conf.textContent  = `${confidence}% confidence`;
 
-      // Restart drain animation
       barFill.style.animation = 'none';
-      barFill.offsetHeight;   // reflow
+      barFill.offsetHeight;
       barFill.style.animation = 'toastDrain 3s linear forwards';
 
       toast.classList.add('show');
-
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
     }
@@ -771,7 +880,7 @@
     function flashCard() {
       const card = document.getElementById('winnerCard');
       card.classList.remove('flash');
-      card.offsetHeight; // reflow
+      card.offsetHeight;
       card.classList.add('flash');
       setTimeout(() => card.classList.remove('flash'), 700);
     }
@@ -805,13 +914,12 @@
       });
     }
 
-    /* ── Model preload (starts immediately on page load) ─────── */
+    /* ── Model preload ───────────────────────────────────────── */
     async function preloadModel() {
       try {
         document.getElementById('loadingMsg').textContent = 'Downloading TensorFlow.js engine…';
         document.getElementById('progressFill').style.width = '20%';
 
-        // Wait for TM library to be available
         let waited = 0;
         while (typeof tmImage === 'undefined' && waited < 15000) {
           await new Promise(r => setTimeout(r, 100));
@@ -829,7 +937,6 @@
         document.getElementById('progressFill').style.width = '100%';
         modelReady = true;
 
-        // Show appropriate screen
         if (currentMode === 'camera') {
           if (ON_FILE) {
             showScreen('cameraBlockedScreen');
@@ -837,9 +944,13 @@
             showScreen('cameraScreen');
           }
         } else {
-          showScreen('cameraScreen'); // hide loading, show nothing (upload area handles it)
-          document.getElementById('cameraScreen').classList.add('hide');
-          document.getElementById('uploadArea').classList.add('show');
+          // Just hide loading/camera screens; respect existing upload preview state
+          ['loadingScreen','cameraScreen','cameraBlockedScreen'].forEach(s =>
+            document.getElementById(s).classList.add('hide'));
+          const preview = document.getElementById('uploadPreview');
+          if (!preview.getAttribute('data-loaded')) {
+            document.getElementById('uploadArea').classList.add('show');
+          }
         }
 
         setStatus('ready', 'Model loaded — ready to classify');
@@ -858,13 +969,11 @@
       document.getElementById('tabUpload').classList.toggle('active', mode === 'upload');
 
       if (mode === 'camera') {
-        // Hide upload stuff
         document.getElementById('uploadArea').classList.remove('show');
         document.getElementById('uploadPreview').classList.remove('show');
         document.getElementById('uploadControls').classList.remove('show');
 
-        // Stop upload mode camera loop interference
-        if (!webcam) {
+        if (!cameraVideo) {
           if (!modelReady) {
             showScreen('loadingScreen');
           } else if (ON_FILE) {
@@ -881,18 +990,15 @@
         document.getElementById('scanLine').classList.remove('active');
         document.getElementById('corners').classList.remove('active');
 
-        // Hide all camera screens
         ['loadingScreen','cameraScreen','cameraBlockedScreen'].forEach(s =>
           document.getElementById(s).classList.add('hide'));
 
-        // Show upload area or preview
         const preview = document.getElementById('uploadPreview');
         if (preview.getAttribute('data-loaded')) {
           preview.classList.add('show');
           document.getElementById('uploadControls').classList.add('show');
         } else {
           if (!modelReady) {
-            // Show loading screen in upload context
             document.getElementById('loadingScreen').classList.remove('hide');
           } else {
             document.getElementById('uploadArea').classList.add('show');
@@ -918,7 +1024,6 @@
       setStatus('loading', 'Requesting camera…');
 
       try {
-        // Request rear/back camera — falls back to any camera if unavailable
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: 'environment' },
@@ -935,8 +1040,6 @@
         cameraVideo.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;';
 
         document.getElementById('leftPanel').appendChild(cameraVideo);
-
-        // Wait for video to be ready
         await new Promise(resolve => cameraVideo.addEventListener('loadeddata', resolve, { once: true }));
 
         showScreen('cameraScreen');
@@ -966,7 +1069,6 @@
     async function cameraLoop() {
       if (!loopActive || currentMode !== 'camera' || !cameraVideo) return;
       if (cameraVideo.readyState >= 2) {
-        // Draw video frame to offscreen 224×224 canvas — no mirroring for rear camera
         predCtx.drawImage(cameraVideo, 0, 0, 224, 224);
         const pred = await model.predict(predCanvas);
         updateUI(pred);
@@ -995,7 +1097,6 @@
         document.getElementById('uploadArea').classList.remove('show');
         document.getElementById('uploadControls').classList.add('show');
 
-        // Center-crop to 224×224 (matches TM preprocessing)
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = 224;
         const ctx = canvas.getContext('2d');
@@ -1008,7 +1109,6 @@
         const winner = pred.reduce((a, b) => a.probability > b.probability ? a : b);
         const pct    = Math.round(winner.probability * 100);
 
-        // Show upload badge + toast
         const badge = document.getElementById('uploadBadge');
         badge.classList.add('show');
 
@@ -1035,7 +1135,7 @@
     }
 
     /* ── Update results ──────────────────────────────────────── */
-    let lastWinner = null;   // track class changes for camera toast
+    let lastWinner = null;
 
     function updateUI(prediction, mode = 'camera') {
       let winnerIdx = 0, winnerProb = 0;
@@ -1047,10 +1147,8 @@
       const pct    = Math.round(winner.probability * 100);
       const emoji  = getEmoji(winner.className);
 
-      // Flash card on every update
       flashCard();
 
-      // Camera: ping border + toast only when species changes
       if (mode === 'camera') {
         pingCamera();
         if (winner.className !== lastWinner) {
@@ -1061,10 +1159,15 @@
 
       document.getElementById('winnerCard').classList.add('has-result');
       document.getElementById('winnerEmoji').textContent = emoji;
+
       const nameEl = document.getElementById('winnerName');
       nameEl.classList.remove('waiting');
       nameEl.textContent = winner.className;
-      document.getElementById('winnerConf').textContent = `${pct}% confidence`;
+
+      // Split confidence into number + % for larger display
+      document.getElementById('winnerConfNum').textContent   = pct;
+      document.getElementById('winnerConfPct').textContent   = '%';
+      document.getElementById('winnerConfLabel').textContent = 'confidence';
 
       prediction.forEach((p, i) => {
         const v = Math.round(p.probability * 100);
@@ -1085,7 +1188,9 @@
       const nameEl = document.getElementById('winnerName');
       nameEl.classList.add('waiting');
       nameEl.textContent = '—';
-      document.getElementById('winnerConf').textContent = '';
+      document.getElementById('winnerConfNum').textContent   = '';
+      document.getElementById('winnerConfPct').textContent   = '';
+      document.getElementById('winnerConfLabel').textContent = '';
       document.getElementById('winnerEmoji').textContent = '🐟';
       document.querySelectorAll('.barFill').forEach(el => el.style.width = '0%');
       document.querySelectorAll('.barPct').forEach(el => el.textContent = '—');
@@ -1097,7 +1202,6 @@
       document.getElementById('fileBanner').classList.add('show');
     }
 
-    // Start preloading model as soon as scripts are ready
     preloadModel();
   </script>
 
