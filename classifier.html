@@ -904,6 +904,11 @@
     }
 
     /* ── Camera ──────────────────────────────────────────────── */
+    let cameraVideo  = null;
+    const predCanvas = document.createElement('canvas');
+    const predCtx    = predCanvas.getContext('2d');
+    predCanvas.width = predCanvas.height = 224;
+
     async function startCamera() {
       if (!modelReady) { setStatus('error', 'Model not ready yet'); return; }
 
@@ -913,14 +918,29 @@
       setStatus('loading', 'Requesting camera…');
 
       try {
-        webcam = new tmImage.Webcam(640, 480, true);
-        await webcam.setup();
-        await webcam.play();
+        // Request rear/back camera — falls back to any camera if unavailable
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width:  { ideal: 1280 },
+            height: { ideal: 720 },
+          }
+        });
 
-        document.getElementById('leftPanel').appendChild(webcam.canvas);
-        showScreen('cameraScreen'); // hides it (we want canvas visible)
+        cameraVideo = document.createElement('video');
+        cameraVideo.srcObject   = stream;
+        cameraVideo.autoplay    = true;
+        cameraVideo.playsInline = true;
+        cameraVideo.muted       = true;
+        cameraVideo.style.cssText = 'width:100%;height:100%;object-fit:cover;position:absolute;inset:0;';
+
+        document.getElementById('leftPanel').appendChild(cameraVideo);
+
+        // Wait for video to be ready
+        await new Promise(resolve => cameraVideo.addEventListener('loadeddata', resolve, { once: true }));
+
+        showScreen('cameraScreen');
         document.getElementById('cameraScreen').classList.add('hide');
-
         document.getElementById('liveBadge').classList.add('show');
         document.getElementById('scanLine').classList.add('active');
         document.getElementById('corners').classList.add('active');
@@ -944,10 +964,13 @@
     }
 
     async function cameraLoop() {
-      if (!loopActive || currentMode !== 'camera') return;
-      webcam.update();
-      const pred = await model.predict(webcam.canvas);
-      updateUI(pred);
+      if (!loopActive || currentMode !== 'camera' || !cameraVideo) return;
+      if (cameraVideo.readyState >= 2) {
+        // Draw video frame to offscreen 224×224 canvas — no mirroring for rear camera
+        predCtx.drawImage(cameraVideo, 0, 0, 224, 224);
+        const pred = await model.predict(predCanvas);
+        updateUI(pred);
+      }
       requestAnimationFrame(cameraLoop);
     }
 
