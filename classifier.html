@@ -981,7 +981,15 @@
         document.getElementById('uploadControls').classList.remove('show');
 
         // Restore camera video if it was previously started
-        if (cameraVideo) cameraVideo.style.display = '';
+        if (cameraVideo) {
+          cameraVideo.style.display = '';
+          document.getElementById('liveBadge').classList.add('show');
+          document.getElementById('scanLine').classList.add('active');
+          document.getElementById('corners').classList.add('active');
+          setStatus('ready', 'Classifying live…');
+          loopActive = true;
+          requestAnimationFrame(cameraLoop);
+        }
 
         if (!cameraVideo) {
           if (!modelReady) {
